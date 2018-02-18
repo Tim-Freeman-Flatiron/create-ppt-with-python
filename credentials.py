@@ -1,5 +1,4 @@
-# this code has been modified from https://developers.google.com/sheets/api/quickstart/python
- 
+# this code has been modified from https://developers.google.com/sheets/api/quickstart/python 
 from __future__ import print_function
 from oauth2client import client
 from oauth2client import tools
