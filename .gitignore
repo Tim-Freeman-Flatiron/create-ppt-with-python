@@ -1,0 +1,5 @@
+secrets.py
+client_secret.json
+*.pptx
+*.key
+__pycache__/
