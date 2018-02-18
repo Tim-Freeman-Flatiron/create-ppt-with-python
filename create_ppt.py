@@ -1,19 +1,14 @@
-import os
-
+from os import getcwd
 from apiclient import discovery
-import httplib2
-
+from httplib2 import Http
 from pptx import Presentation
 from pptx.util import Inches
-
-import smtplib
+from smtplib import SMTP
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email.encoders import encode_base64
-
 from credentials import get_credentials
-
 from secrets import FROM_EMAIL, FROM_PASSWORD, TO_EMAIL, SHEET_ID
 
 def convert_file_to_attachment(file):
@@ -35,7 +30,7 @@ def send_email_with_attachments(files_to_attach):
 		attachment = convert_file_to_attachment(file)
 		message.attach(attachment)
 
-	server = smtplib.SMTP('smtp.gmail.com', 587)
+	server = SMTP('smtp.gmail.com', 587)
 	server.starttls()
 	server.login(FROM_EMAIL, FROM_PASSWORD)
 	text = message.as_string()
@@ -48,16 +43,13 @@ def proccess_tabs(tabs, service, spreadsheetId):
 	for tab in tabs:
 		tab_name = tab.get('properties', {}).get('title')
 		rangeName = tab_name + '!A2:C'
-		result = service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
-		student_data = result.get('values', [])
-		file_path = make_path(tab_name)
+		tab_data = service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
+		student_data = tab_data.get('values', [])
+		file_path = getcwd() + '/PowerPoints/' + tab_name + '.pptx'
 		tab_object = {'file': file_path, 'student_data': student_data}
 		parsed_tabs.append(tab_object)
 
 	return parsed_tabs
-
-def make_path(tab_name):
-	return os.getcwd() + '/' + tab_name + '.pptx'
 
 def make_all_ppts(parsed_tabs):
 	for tab in parsed_tabs:
@@ -108,7 +100,7 @@ def isolate_file_names_for_attachments(parsed_tabs):
 
 def main():
     credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
+    http = credentials.authorize(Http())
     discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?''version=v4')
     service = discovery.build('sheets', 'v4', http=http, discoveryServiceUrl=discoveryUrl)  
     tabs = service.spreadsheets().get(spreadsheetId=SHEET_ID).execute().get('sheets', '')

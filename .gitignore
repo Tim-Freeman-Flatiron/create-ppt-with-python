@@ -1,5 +1,6 @@
 secrets.py
 client_secret.json
+PowerPoints/
 *.pptx
 *.key
 __pycache__/
