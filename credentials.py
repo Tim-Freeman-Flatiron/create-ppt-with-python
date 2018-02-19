@@ -1,4 +1,3 @@
-# this code has been modified from https://developers.google.com/sheets/api/quickstart/python
 import os
 
 from oauth2client import client, tools
@@ -9,6 +8,7 @@ from argparse import ArgumentParser
 # If modifying SECRET_JSON, APP_NAME, or SCOPES, delete previously saved credentials
 from secrets import SECRET_JSON, APP_NAME, SCOPES, CREDENTIAL_PATH
 
+# this code has been modified from https://developers.google.com/sheets/api/quickstart/python
 def get_credentials():
     home_dir = os.path.expanduser('~')
     credential_dir = os.path.join(home_dir, '.credentials')
