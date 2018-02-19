@@ -1,49 +1,65 @@
+# for path manipulation
 from os import getcwd
+
+# for google api calls
 from apiclient import discovery
 from httplib2 import Http
+from credentials import get_credentials # relative import of function to verify credentials
+
+# for making ppts
 from pptx import Presentation
 from pptx.util import Inches
+
+# for sending email
 from smtplib import SMTP
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email.encoders import encode_base64
-from credentials import get_credentials
+
+# relative import of private variables
 from secrets import FROM_EMAIL, FROM_PASSWORD, TO_EMAIL, SHEET_ID
 
 def convert_file_to_attachment(file):
-	file_name = file.split('/')[-1]
+	file_name = file.split('/')[-1] # extract file name from absolute path
 	file_object = open(file, 'rb')
 	attachment = MIMEBase('application', 'octet-stream')
-	attachment.set_payload((file_object).read())
+	attachment.set_payload(file_object.read())
 	encode_base64(attachment)
 	attachment.add_header('Content-Disposition', "attachment; filename= %s" % file_name)
 	return attachment
 
-def send_email_with_attachments(files_to_attach):
-	message = MIMEMultipart()
-	message['From'] = FROM_EMAIL
-	message['To'] = TO_EMAIL
-	message['Subject'] = 'This Week\'s Community Meeting Powerpoints'
+def make_email(files_to_attach):
+	email = MIMEMultipart()
+	email_body = 'See attached.'
+	email.attach(MIMEText(email_body, 'plain'))
+
+	email['From'] = FROM_EMAIL
+	email['To'] = TO_EMAIL
+	email['Subject'] = 'This Week\'s Community Meeting Powerpoints'
 
 	for file in files_to_attach:
 		attachment = convert_file_to_attachment(file)
-		message.attach(attachment)
+		email.attach(attachment)
 
+	packaged_email = email.as_string()
+
+	return packaged_email
+
+def send_email(email):
 	server = SMTP('smtp.gmail.com', 587)
 	server.starttls()
 	server.login(FROM_EMAIL, FROM_PASSWORD)
-	text = message.as_string()
-	server.sendmail(FROM_EMAIL, TO_EMAIL, text)
+	server.sendmail(FROM_EMAIL, TO_EMAIL, email)
 	server.quit()
 
-def proccess_tabs(tabs, service, spreadsheetId):
+def proccess_tabs(tabs, service):
 	parsed_tabs = []
 
 	for tab in tabs:
 		tab_name = tab.get('properties', {}).get('title')
-		rangeName = tab_name + '!A2:C'
-		tab_data = service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
+		range_name = tab_name + '!A2:C'
+		tab_data = service.spreadsheets().values().get(spreadsheetId=SHEET_ID, range=range_name).execute()
 		student_data = tab_data.get('values', [])
 		file_path = getcwd() + '/PowerPoints/' + tab_name + '.pptx'
 		tab_object = {'file': file_path, 'student_data': student_data}
@@ -99,16 +115,17 @@ def isolate_file_names_for_attachments(parsed_tabs):
 	return file_names
 
 def main():
-    credentials = get_credentials()
-    http = credentials.authorize(Http())
-    discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?''version=v4')
-    service = discovery.build('sheets', 'v4', http=http, discoveryServiceUrl=discoveryUrl)  
-    tabs = service.spreadsheets().get(spreadsheetId=SHEET_ID).execute().get('sheets', '')
-    processed_tabs = proccess_tabs(tabs, service, SHEET_ID)
-    make_all_ppts(processed_tabs)
-    files = isolate_file_names_for_attachments(processed_tabs)
-    send_email_with_attachments(files)
+  credentials = get_credentials()
+  http = credentials.authorize(Http())
+  discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?''version=v4')
+  service = discovery.build('sheets', 'v4', http=http, discoveryServiceUrl=discoveryUrl)
+  tabs = service.spreadsheets().get(spreadsheetId=SHEET_ID).execute().get('sheets', '')
+  processed_tabs = proccess_tabs(tabs, service)
+  make_all_ppts(processed_tabs)
+  files_to_attach = isolate_file_names_for_attachments(processed_tabs)
+  email = make_email(files_to_attach)
+  send_email(email)
 
 
 if __name__ == '__main__':
-    main()
+	main()
