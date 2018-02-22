@@ -33,6 +33,7 @@ def convert_file_to_attachment(file):
 	return attachment
 
 def make_email(files_to_attach):
+	print('Creating email...')
 	email = MakeComplexEmailObject()
 	email_body = 'See attached.'
 	email.attach(MakeEmailBody(email_body, 'plain'))
@@ -40,27 +41,33 @@ def make_email(files_to_attach):
 	email['From'] = FROM_EMAIL
 	email['To'] = TO_EMAIL
 	email['Subject'] = 'This Week\'s Community Meeting Powerpoints'
-
+	print('- Attaching PowerPoints...')
 	for file in files_to_attach:
 		attachment = convert_file_to_attachment(file)
 		email.attach(attachment)
+		print('-- Attached {}'.format(file.split('/')[-1]))
 
 	packaged_email = email.as_string()
-
+	print('- Email created.')
 	return packaged_email
 
 def send_email(email):
+	print('Starting server...')
 	server = StartEmailServer('smtp.gmail.com', 587)
 	server.starttls()
+	print('- Logging into Gmail...')
 	server.login(FROM_EMAIL, FROM_PASSWORD)
+	print('- Sending email...')
 	server.sendmail(FROM_EMAIL, TO_EMAIL, email)
 	server.quit()
+	print('- Email sent and server ended.')
 
 def proccess_tabs(raw_tabs, api_adapter):
 	processed_tabs = []
 
 	for tab in raw_tabs:
 		tab_name = tab.get('properties', {}).get('title')
+		print('- Processing {}...'.format(tab_name))
 		range_name = tab_name + '!A2:C'
 		tab_data = api_adapter.spreadsheets().values().get(spreadsheetId=SHEET_ID, range=range_name).execute()
 		student_data = tab_data.get('values', [])
@@ -70,7 +77,7 @@ def proccess_tabs(raw_tabs, api_adapter):
 									'student_data': student_data
 									}
 		processed_tabs.append(tab_object)
-
+	print('- Finished processing tabs.')
 	return processed_tabs
 
 def make_ppts_from_processed_tabs(processed_tabs):
@@ -80,6 +87,7 @@ def make_ppts_from_processed_tabs(processed_tabs):
 		make_ppt(file_path, student_data)
 
 def make_ppt(file_path, student_data):
+	print('Making PowerPoint...')
 	presentation = Presentation()
 	blank_slide_layout = presentation.slide_layouts[6]
 	slide = presentation.slides.add_slide(blank_slide_layout)
@@ -111,6 +119,7 @@ def make_ppt(file_path, student_data):
 		r = r+1
 
 	presentation.save(file_path)
+	print('- Saved PowerPoint at ./{}'.format('/'.join(file_path.split('/')[-2:])))
 
 def isolate_file_names_for_attachments(processed_tabs):
 	file_names = []
@@ -121,16 +130,19 @@ def isolate_file_names_for_attachments(processed_tabs):
 	return file_names
 
 def main():
+  print('Connecting to GoogleSheets...')
   api_credentials = get_credentials()
   http = api_credentials.authorize(Http())
   api_url = ('https://sheets.googleapis.com/$discovery/rest?''version=v4')
   api_adapter = api.build('sheets', 'v4', http=http, discoveryServiceUrl=api_url)
+  print('Extracting individual tabs from the spreadsheet...')
   raw_tabs = api_adapter.spreadsheets().get(spreadsheetId=SHEET_ID).execute().get('sheets', '')
   processed_tabs = proccess_tabs(raw_tabs, api_adapter)
   make_ppts_from_processed_tabs(processed_tabs)
   files_to_attach = isolate_file_names_for_attachments(processed_tabs)
   email = make_email(files_to_attach)
   send_email(email)
+  print('Done.')
 
 if __name__ == '__main__':
 	main()
