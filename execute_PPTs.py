@@ -11,7 +11,7 @@ def add_student_to_slide(slide, student, textbox):
   first_name = student[0]
   last_name = student[1]
   data_item = student[2]
-  textbox.text_frame.text = first_name + ' ' + last_name + ' ' + data_item
+  textbox.text_frame.text = "{} {} {}".format(first_name, last_name, data_item)
 
 def make_ppt(file_path, student_data):
   print('Making PowerPoint...')
