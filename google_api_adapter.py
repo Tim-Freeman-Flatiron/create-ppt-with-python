@@ -6,9 +6,9 @@ from credentials import get_credentials # relative import of function to verify 
 from secrets import SHEET_ID
 
 def get_spreadsheet_data_from_googlesheets():
-  GoogleSheets = connect_to_googlesheets()
-  tab_names = extract_spreadsheet_tabs(GoogleSheets, SHEET_ID)
-  tab_objects = process_data(tab_names, GoogleSheets)
+  googlesheets = connect_to_googlesheets()
+  tab_names = extract_spreadsheet_tabs(googlesheets, SHEET_ID)
+  tab_objects = process_data(tab_names, googlesheets)
   return tab_objects
 
 def connect_to_googlesheets():
@@ -16,23 +16,23 @@ def connect_to_googlesheets():
   api_credentials = get_credentials()
   http = api_credentials.authorize(Http())
   api_url = ('https://sheets.googleapis.com/$discovery/rest?''version=v4')
-  GoogleSheets = api.build('sheets', 'v4', http=http, discoveryServiceUrl=api_url)
+  googlesheets = api.build('sheets', 'v4', http=http, discoveryServiceUrl=api_url)
   print('- Successfully established connection to GoogleSheets.')
-  return GoogleSheets
+  return googlesheets
 
-def extract_spreadsheet_tabs(GoogleSheets, SHEET_ID):
+def extract_spreadsheet_tabs(googlesheets, SHEET_ID):
   print('Extracting individual tabs from the spreadsheet...')
-  tab_names = GoogleSheets.spreadsheets().get(spreadsheetId=SHEET_ID).execute().get('sheets', '')
+  tab_names = googlesheets.spreadsheets().get(spreadsheetId=SHEET_ID).execute().get('sheets', '')
   print('- Tab extraction successful.')
   return tab_names
 
-def process_data(tab_names, GoogleSheets):
+def process_data(tab_names, googlesheets):
   tab_objects = []
   for tab in tab_names:
     tab_name = tab.get('properties', {}).get('title')
     print('- Processing {}...'.format(tab_name))
     range_name = tab_name + '!A2:C'
-    tab_data = GoogleSheets.spreadsheets().values().get(spreadsheetId=SHEET_ID, range=range_name).execute()
+    tab_data = googlesheets.spreadsheets().values().get(spreadsheetId=SHEET_ID, range=range_name).execute()
     student_data = tab_data.get('values', [])
     file_path = get_current_directory() + '/PowerPoints/' + tab_name + '.pptx'
     tab_object = {
