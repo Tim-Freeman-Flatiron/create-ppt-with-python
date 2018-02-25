@@ -4,6 +4,7 @@
 from google_api_adapter import get_spreadsheet_data_from_googlesheets
 from execute_PPTs import make_all_ppts
 from execute_email import create_and_send_email
+import sys
 
 def main():
   spreadsheet_data = get_spreadsheet_data_from_googlesheets()

@@ -27,7 +27,7 @@ def extract_spreadsheet_tabs(GoogleSheets, SHEET_ID):
   return tab_names
 
 def process_data(tab_names, GoogleSheets):
-  tab_info_collection = []
+  tab_objects = []
   for tab in tab_names:
     tab_name = tab.get('properties', {}).get('title')
     print('- Processing {}...'.format(tab_name))
@@ -39,6 +39,6 @@ def process_data(tab_names, GoogleSheets):
                   'file': file_path,
                   'student_data': student_data
                   }
-    tab_info_collection.append(tab_object)
+    tab_objects.append(tab_object)
   print('- Finished processing tabs.')
-  return tab_info_collection
+  return tab_objects
