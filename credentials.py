@@ -16,15 +16,15 @@ def get_credentials():
     if not os.path.exists(credential_dir):
         os.makedirs(credential_dir)
     
-    cred_path = os.path.join(credential_dir, CREDENTIAL_PATH)
-    store = Storage(cred_path)
-    credentials = store.get()
+    credential_path = os.path.join(credential_dir, CREDENTIAL_PATH)
+    credentials_store = Storage(credential_path)
+    credentials = credentials_store.get()
     
     if not credentials or credentials.invalid:
-        flow = client.flow_from_clientsecrets(SECRET_JSON, SCOPES)
-        flow.user_agent = APP_NAME
+        credentials_api_adapter = client.flow_from_clientsecrets(SECRET_JSON, SCOPES)
+        credentials_api_adapter.user_agent = APP_NAME
         flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-        credentials = tools.run_flow(flow, store, flags)
-        print('Storing credentials to ' + cred_path)
+        credentials = tools.run_flow(credentials_api_adapter, credentials_store, flags)
+        print('Storing credentials to ' + credential_path)
     
     return credentials
