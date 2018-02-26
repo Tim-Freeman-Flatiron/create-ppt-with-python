@@ -4,10 +4,11 @@
 from google_api_adapter import get_spreadsheet_data_from_googlesheets
 from execute_PPTs import make_all_ppts
 from execute_email import create_and_send_email
+from secrets import PPTS_SHEET_ID
 import sys
 
 def main():
-  spreadsheet_data = get_spreadsheet_data_from_googlesheets()
+  spreadsheet_data = get_spreadsheet_data_from_googlesheets(PPTS_SHEET_ID, '!A2:C')
   make_all_ppts(spreadsheet_data)
   create_and_send_email(spreadsheet_data)
   print('Done.')

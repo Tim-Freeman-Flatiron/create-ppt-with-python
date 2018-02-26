@@ -23,7 +23,7 @@ def get_credentials():
     if not credentials or credentials.invalid:
         credentials_api_adapter = client.flow_from_clientsecrets(SECRET_JSON, SCOPES)
         credentials_api_adapter.user_agent = APP_NAME
-        flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+        flags = ArgumentParser(parents=[tools.argparser]).parse_args()
         credentials = tools.run_flow(credentials_api_adapter, credentials_store, flags)
         print('Storing credentials to ' + credential_path)
     

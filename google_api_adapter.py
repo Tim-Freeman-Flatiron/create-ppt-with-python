@@ -3,12 +3,11 @@ from apiclient import discovery as api
 from httplib2 import Http
 from os import getcwd as get_current_directory
 from credentials import get_credentials # relative import of function to verify credentials
-from secrets import SHEET_ID
 
-def get_spreadsheet_data_from_googlesheets():
+def get_spreadsheet_data_from_googlesheets(SHEET_ID, data_range):
   googlesheets = connect_to_googlesheets()
   tab_names = extract_spreadsheet_tabs(googlesheets, SHEET_ID)
-  tab_objects = process_data(tab_names, googlesheets)
+  tab_objects = process_data_for_ppts(tab_names, googlesheets, SHEET_ID, data_range)
   return tab_objects
 
 def connect_to_googlesheets():
@@ -22,16 +21,16 @@ def connect_to_googlesheets():
 
 def extract_spreadsheet_tabs(googlesheets, SHEET_ID):
   print('Extracting individual tabs from the spreadsheet...')
-  tab_names = googlesheets.spreadsheets().get(spreadsheetId=SHEET_ID).execute().get('sheets', '')
+  tabs = googlesheets.spreadsheets().get(spreadsheetId=SHEET_ID).execute().get('sheets', '')
   print('- Tab extraction successful.')
-  return tab_names
+  return tabs
 
-def process_data(tab_names, googlesheets):
+def process_data_for_ppts(tabs, googlesheets, SHEET_ID, data_range):
   tab_objects = []
-  for tab in tab_names:
+  for tab in tabs:
     tab_name = tab.get('properties', {}).get('title')
     print('- Processing {}...'.format(tab_name))
-    range_name = tab_name + '!A2:C'
+    range_name = tab_name + data_range
     tab_data = googlesheets.spreadsheets().values().get(spreadsheetId=SHEET_ID, range=range_name).execute()
     student_data = tab_data.get('values', [])
     file_path = get_current_directory() + '/PowerPoints/' + tab_name + '.pptx'
