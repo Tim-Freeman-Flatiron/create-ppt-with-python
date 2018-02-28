@@ -77,8 +77,9 @@ def add_current_data_to_master(master_data, current_students):
       current_student['pw_change'] = pw_change
       current_student['gpa_change'] = gpa_change
     r += 1
-  
-  date = str(datetime.date.today().month) + '/' + str(datetime.date.today().day)
+  today = str(datetime.date.today().day)
+  month = str(datetime.date.today().month)
+  date = month + '/' + today
   new_headers = ['PW', 'GPA', 'PW Change', 'GPA Change']
   for header in new_headers:
     line = '{} {}'.format(date, header)
@@ -95,14 +96,25 @@ def write_new_master_to_sheet(api, DATASET_SHEET_ID, master_tab_name, final_data
   body = {'values': final_data}
   api.spreadsheets().values().update(spreadsheetId=DATASET_SHEET_ID, range=range_name,valueInputOption='RAW',body=body).execute()    
 
-def sort_students_by_data(students_list, attribute, descending, number_of_students_to_return):
+def sort_students_by_data(students_list, attribute):
   student_ids = list(students_list.keys())
   sortable_data = []
   for stu_id in student_ids:
-    temp_obj = students_list[stu_id]
+    student = students_list[stu_id]
+    temp_obj = {}
     temp_obj['id'] = stu_id
+    temp_obj['first_name'] = student['first_name']
+    temp_obj['last_name'] = student['last_name']
+    temp_obj['data'] = student[attribute]
     sortable_data.append(temp_obj)
-  print(sorted(sortable_data, key=lambda student: student[attribute], reverse=descending)[0:number_of_students_to_return])
+  
+  sorted_students = sorted(sortable_data, key=lambda student: student['data'], reverse=True)
+  for student in sorted_students:
+    if 'change' in attribute:
+      student['data'] = '+' + str(student['data'])
+    else:
+      student['data'] = str(student['data'])
+  return sorted_students
 
 def main():
   api = connect_to_googlesheets()
@@ -112,9 +124,9 @@ def main():
   master_data = extract_relevant_data(api, DATASET_SHEET_ID, tabs, 'Q3 Master', '!1:250')
   final_data = add_current_data_to_master(master_data, current_students)
   # write_new_master_to_sheet(api, DATASET_SHEET_ID, 'Q3 Master', final_data['master_data'])
-  pw_jumpers = sort_students_by_data(final_data['current_students'], 'pw_change', False, 5)
-  pw_leaders = sort_students_by_data(final_data['current_students'], 'pw_avg', False, 5)
-  gpa_jumpers = sort_students_by_data(final_data['current_students'], 'gpa_change', False, 5)
+  pw_jumpers = sort_students_by_data(final_data['current_students'], 'pw_change')
+  pw_leaders = sort_students_by_data(final_data['current_students'], 'pw_avg')
+  gpa_jumpers = sort_students_by_data(final_data['current_students'], 'gpa_change')
 
 
 
