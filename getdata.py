@@ -1,6 +1,10 @@
 from google_api_adapter import connect_to_googlesheets, extract_spreadsheet_tabs
 from secrets import DATASET_SHEET_ID
 import datetime
+from os import getcwd as get_current_directory
+from pptx import Presentation
+from pptx.util import Inches
+from execute_email import create_and_send_email
 
 def extract_relevant_data(api, DATASET_SHEET_ID, tabs, relevant_tab_name, data_range):
   for tab in tabs:
@@ -96,9 +100,9 @@ def write_new_master_to_sheet(api, DATASET_SHEET_ID, master_tab_name, final_data
   body = {'values': final_data}
   api.spreadsheets().values().update(spreadsheetId=DATASET_SHEET_ID, range=range_name,valueInputOption='RAW',body=body).execute()    
 
-def sort_students_by_data(students_list, attribute):
+def separate_students_by_data_group(students_list, attribute):
   student_ids = list(students_list.keys())
-  sortable_data = []
+  separated_students = []
   for stu_id in student_ids:
     student = students_list[stu_id]
     temp_obj = {}
@@ -106,15 +110,56 @@ def sort_students_by_data(students_list, attribute):
     temp_obj['first_name'] = student['first_name']
     temp_obj['last_name'] = student['last_name']
     temp_obj['data'] = student[attribute]
-    sortable_data.append(temp_obj)
+    separated_students.append(temp_obj)
   
-  sorted_students = sorted(sortable_data, key=lambda student: student['data'], reverse=True)
-  for student in sorted_students:
+  # separated_students = sorted(sortable_data, key=lambda student: student['data'], reverse=True)
+  for student in separated_students:
     if 'change' in attribute:
       student['data'] = '+' + str(student['data'])
     else:
       student['data'] = str(student['data'])
-  return sorted_students
+  return separated_students
+
+def add_student_to_slide(slide, student, textbox):
+  first_name = student['first_name']
+  last_name = student['last_name']
+  data = student['data']
+  textbox.text_frame.text = "{} {} {}".format(first_name, last_name, data)
+
+def make_ppt(file_path, data):
+  print('Making PowerPoint...')
+  presentation = Presentation()
+  blank_slide_layout = presentation.slide_layouts[6]
+  slide = presentation.slides.add_slide(blank_slide_layout)
+
+  row = 0
+  number_of_students_on_slide = 0
+  left_margin = 0.5
+  top_margin = 1
+  textbox_width = 1
+  textbox_height = 1
+
+  for student in data:
+    if row == 0:
+      title_box = slide.shapes.add_textbox(Inches(left_margin),Inches(top_margin),Inches(textbox_width),Inches(textbox_height))
+      title_box.text_frame.text = file_path.split('/')[-1].split('_')[-1][:-5]
+      slide = presentation.slides.add_slide(blank_slide_layout) 
+    if row > 0:
+      if number_of_students_on_slide == 34:
+        slide = presentation.slides.add_slide(blank_slide_layout)
+        number_of_students_on_slide = 0
+        left_margin = 0.5
+        top_margin = 1
+      if number_of_students_on_slide == 12 or number_of_students_on_slide == 24:
+        left_margin += 3
+        top_margin = 1
+      new_textbox = slide.shapes.add_textbox(Inches(left_margin),Inches(top_margin),Inches(textbox_width),Inches(textbox_height))
+      add_student_to_slide(slide, student, new_textbox)
+      number_of_students_on_slide += 1
+      top_margin += 0.5
+    row += 1
+  presentation.save(file_path)
+  print('- Saved PowerPoint at ./{}'.format('/'.join(file_path.split('/')[-2:])))
 
 def main():
   api = connect_to_googlesheets()
@@ -123,10 +168,26 @@ def main():
   current_students = make_current_students(current_data)
   master_data = extract_relevant_data(api, DATASET_SHEET_ID, tabs, 'Q3 Master', '!1:250')
   final_data = add_current_data_to_master(master_data, current_students)
-  # write_new_master_to_sheet(api, DATASET_SHEET_ID, 'Q3 Master', final_data['master_data'])
-  pw_jumpers = sort_students_by_data(final_data['current_students'], 'pw_change')
-  pw_leaders = sort_students_by_data(final_data['current_students'], 'pw_avg')
-  gpa_jumpers = sort_students_by_data(final_data['current_students'], 'gpa_change')
+  write_new_master_to_sheet(api, DATASET_SHEET_ID, 'Q3 Master', final_data['master_data'])
+  unsorted_pw_jumpers = separate_students_by_data_group(final_data['current_students'], 'pw_change')
+  sorted_pw_jumpers = sorted(unsorted_pw_jumpers, key=lambda student: int(student['data'][1:]))
+
+  unsorted_pw_leaders = list(filter((lambda student: int(student['data'][:-1]) >= 85),separate_students_by_data_group(final_data['current_students'], 'pw_avg')))
+  sorted_pw_leaders = sorted(unsorted_pw_leaders, key=lambda student: int(student['data'][:-1]))
+
+  unsorted_gpa_jumpers = separate_students_by_data_group(final_data['current_students'], 'gpa_change')
+  sorted_gpa_jumpers = sorted(unsorted_gpa_jumpers, key=lambda student: float(student['data'][1:]))
+
+  today = str(datetime.date.today().day)
+  month = str(datetime.date.today().month)
+  year = str(datetime.date.today().year)[2:]
+  date = month.rjust(2, '0') + '_' + today + '_' + year
+
+  make_ppt('{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date), sorted_pw_jumpers)
+  make_ppt('{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date), sorted_pw_leaders)
+  make_ppt('{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date), sorted_gpa_jumpers)
+
+  create_and_send_email(['{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date), '{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date), '{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date)])
 
 
 

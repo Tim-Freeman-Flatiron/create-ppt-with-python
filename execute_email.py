@@ -6,8 +6,8 @@ from email.encoders import encode_base64
 
 from secrets import FROM_EMAIL, FROM_PASSWORD, TO_EMAIL
 
-def create_and_send_email(spreadsheet_data):
-  attachments = isolate_file_names(spreadsheet_data)
+def create_and_send_email(attachments):
+  # attachments = isolate_file_names(spreadsheet_data)
   email_with_attachments = make_email(attachments)
   send_email(email_with_attachments)
 
