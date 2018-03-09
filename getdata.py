@@ -145,7 +145,7 @@ def make_ppt(file_path, data):
       title_box.text_frame.text = file_path.split('/')[-1].split('_')[-1][:-5]
       slide = presentation.slides.add_slide(blank_slide_layout) 
     if row > 0:
-      if number_of_students_on_slide == 34:
+      if number_of_students_on_slide == 36:
         slide = presentation.slides.add_slide(blank_slide_layout)
         number_of_students_on_slide = 0
         left_margin = 0.5
@@ -169,14 +169,25 @@ def main():
   master_data = extract_relevant_data(api, DATASET_SHEET_ID, tabs, 'Q3 Master', '!1:250')
   final_data = add_current_data_to_master(master_data, current_students)
   write_new_master_to_sheet(api, DATASET_SHEET_ID, 'Q3 Master', final_data['master_data'])
-  unsorted_pw_jumpers = separate_students_by_data_group(final_data['current_students'], 'pw_change')
+  unsorted_pw_jumpers = list(filter((lambda student: int(student['data'][1:]) > 0),separate_students_by_data_group(final_data['current_students'], 'pw_change')))
   sorted_pw_jumpers = sorted(unsorted_pw_jumpers, key=lambda student: int(student['data'][1:]))
+
+  if len(sorted_pw_jumpers) > 108:
+    start = len(sorted_pw_jumpers) - 108
+    sorted_pw_jumpers = sorted_pw_jumpers[start:]
+
+  for student in sorted_pw_jumpers:
+    student['data'] = student['data'] + '%'
 
   unsorted_pw_leaders = list(filter((lambda student: int(student['data'][:-1]) >= 85),separate_students_by_data_group(final_data['current_students'], 'pw_avg')))
   sorted_pw_leaders = sorted(unsorted_pw_leaders, key=lambda student: int(student['data'][:-1]))
 
-  unsorted_gpa_jumpers = separate_students_by_data_group(final_data['current_students'], 'gpa_change')
+  unsorted_gpa_jumpers = list(filter((lambda student: float(student['data'][1:]) > 0.0),separate_students_by_data_group(final_data['current_students'], 'gpa_change')))
   sorted_gpa_jumpers = sorted(unsorted_gpa_jumpers, key=lambda student: float(student['data'][1:]))
+
+  if len(sorted_gpa_jumpers) > 108:
+    start = len(sorted_gpa_jumpers) - 108
+    sorted_gpa_jumpers = sorted_gpa_jumpers[start:]
 
   today = str(datetime.date.today().day)
   month = str(datetime.date.today().month)
