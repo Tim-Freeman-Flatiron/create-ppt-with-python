@@ -5,6 +5,8 @@ from os import getcwd as get_current_directory
 from pptx import Presentation
 from pptx.util import Inches
 from execute_email import create_and_send_email
+import logging
+logging.basicConfig(filename='debug.log',level=logging.DEBUG)
 
 def extract_relevant_data(api, DATASET_SHEET_ID, tabs, relevant_tab_name, data_range):
   for tab in tabs:
@@ -24,7 +26,7 @@ def make_current_students(current_data):
       current_pw_avg = index
     elif column == 'Weighted Live GPA':
       current_gpa = index
-  
+
   student_data = {}
   r = 0
   for student in current_data:
@@ -56,7 +58,7 @@ def add_current_data_to_master(master_data, current_students):
       student_last_name = master_student[last_name]
       student_first_name = master_student[first_name]
       current_student = current_students.get(student_id, {})
-      
+
       current_pw_avg = current_student.get('pw_avg').replace('%', '')
       current_gpa = current_student.get('gpa')
 
@@ -65,7 +67,7 @@ def add_current_data_to_master(master_data, current_students):
 
       previous_pw = master_student[previous_pw_column]
       previous_gpa = master_student[previous_gpa_column]
-      
+
       pw_change = ''
       if previous_pw and current_pw_avg:
         pw_change = int(current_pw_avg) - int(previous_pw)
@@ -88,7 +90,7 @@ def add_current_data_to_master(master_data, current_students):
   for header in new_headers:
     line = '{} {}'.format(date, header)
     master_data[0].append(line)
-  
+
   final_data = {}
   final_data['master_data'] = master_data
   final_data['current_students'] = current_students
@@ -98,7 +100,7 @@ def write_new_master_to_sheet(api, DATASET_SHEET_ID, master_tab_name, final_data
   range_max = len(final_data)
   range_name = '{}!1:{}'.format(master_tab_name,range_max)
   body = {'values': final_data}
-  api.spreadsheets().values().update(spreadsheetId=DATASET_SHEET_ID, range=range_name,valueInputOption='RAW',body=body).execute()    
+  api.spreadsheets().values().update(spreadsheetId=DATASET_SHEET_ID, range=range_name,valueInputOption='RAW',body=body).execute()
 
 def separate_students_by_data_group(students_list, attribute):
   student_ids = list(students_list.keys())
@@ -111,7 +113,7 @@ def separate_students_by_data_group(students_list, attribute):
     temp_obj['last_name'] = student['last_name']
     temp_obj['data'] = student[attribute]
     separated_students.append(temp_obj)
-  
+
   # separated_students = sorted(sortable_data, key=lambda student: student['data'], reverse=True)
   for student in separated_students:
     if 'change' in attribute:
@@ -143,7 +145,7 @@ def make_ppt(file_path, data):
     if row == 0:
       title_box = slide.shapes.add_textbox(Inches(left_margin),Inches(top_margin),Inches(textbox_width),Inches(textbox_height))
       title_box.text_frame.text = file_path.split('/')[-1].split('_')[-1][:-5]
-      slide = presentation.slides.add_slide(blank_slide_layout) 
+      slide = presentation.slides.add_slide(blank_slide_layout)
     if row > 0:
       if number_of_students_on_slide == 36:
         slide = presentation.slides.add_slide(blank_slide_layout)
@@ -167,8 +169,13 @@ def main():
   current_data = extract_relevant_data(api, DATASET_SHEET_ID, tabs, 'CurrentData', '!A1:AE')
   current_students = make_current_students(current_data)
   master_data = extract_relevant_data(api, DATASET_SHEET_ID, tabs, 'Q3 Master', '!1:250')
+  today = str(datetime.date.today().month) + '/' + str(datetime.date.today().day)
+  written_to_master = True if today in ' '.join(master_data[0]) else False
   final_data = add_current_data_to_master(master_data, current_students)
-  write_new_master_to_sheet(api, DATASET_SHEET_ID, 'Q3 Master', final_data['master_data'])
+
+  if not written_to_master:
+    write_new_master_to_sheet(api, DATASET_SHEET_ID, 'Q3 Master', final_data['master_data'])
+
   unsorted_pw_jumpers = list(filter((lambda student: int(student['data'][1:]) > 0),separate_students_by_data_group(final_data['current_students'], 'pw_change')))
   sorted_pw_jumpers = sorted(unsorted_pw_jumpers, key=lambda student: int(student['data'][1:]))
 
@@ -189,16 +196,17 @@ def main():
     start = len(sorted_gpa_jumpers) - 108
     sorted_gpa_jumpers = sorted_gpa_jumpers[start:]
 
-  today = str(datetime.date.today().day)
-  month = str(datetime.date.today().month)
-  year = str(datetime.date.today().year)[2:]
-  date = month.rjust(2, '0') + '_' + today + '_' + year
+  date = str(datetime.date.today().month).rjust(2, '0') + '_' + str(datetime.date.today().day) + '_' + str(datetime.date.today().year)[2:]
 
-  make_ppt('{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date), sorted_pw_jumpers)
-  make_ppt('{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date), sorted_pw_leaders)
-  make_ppt('{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date), sorted_gpa_jumpers)
+  pwjumpers_path = '{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date)
+  pwleaders_path = '{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date)
+  gpajumpers_path = '{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date)
 
-  create_and_send_email(['{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date), '{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date), '{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date)])
+  make_ppt(pwjumpers_path, sorted_pw_jumpers)
+  make_ppt(pwleaders_path, sorted_pw_leaders)
+  make_ppt(gpajumpers_path, sorted_gpa_jumpers)
+
+  create_and_send_email([pwjumpers_path, pwleaders_path, gpajumpers_path])
 
 
 

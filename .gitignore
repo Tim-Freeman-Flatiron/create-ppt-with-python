@@ -3,4 +3,6 @@ client_secret.json
 PowerPoints/
 *.pptx
 *.key
+*.pyc
+*.log
 __pycache__/
