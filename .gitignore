@@ -6,3 +6,4 @@ PowerPoints/
 *.pyc
 *.log
 __pycache__/
+*credentials

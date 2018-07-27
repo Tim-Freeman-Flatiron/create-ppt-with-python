@@ -39,13 +39,13 @@ def make_current_students(current_data):
 
 def add_current_data_to_master(master_data, current_students):
   headers = master_data[0]
-  # find right columns
+# find right columns
   for index, column in enumerate(headers):
     if column == 'HS Dashboard ID':
       id_column = index
-    if 'PW' in column and not 'Change' in column:
+    if 'PW' in column and 'Change' not in column:
       previous_pw_column = index
-    if 'GPA' in column and not 'Change' in column:
+    if 'GPA' in column and 'Change' not in column:
       previous_gpa_column = index
     if column == 'last_name':
       last_name = index
@@ -168,13 +168,13 @@ def main():
   tabs = extract_spreadsheet_tabs(api, DATASET_SHEET_ID)
   current_data = extract_relevant_data(api, DATASET_SHEET_ID, tabs, 'CurrentData', '!A1:AE')
   current_students = make_current_students(current_data)
-  master_data = extract_relevant_data(api, DATASET_SHEET_ID, tabs, 'Q3 Master', '!1:250')
+  master_data = extract_relevant_data(api, DATASET_SHEET_ID, tabs, 'Q4 Master', '!1:250')
   today = str(datetime.date.today().month) + '/' + str(datetime.date.today().day)
   written_to_master = True if today in ' '.join(master_data[0]) else False
   final_data = add_current_data_to_master(master_data, current_students)
 
   if not written_to_master:
-    write_new_master_to_sheet(api, DATASET_SHEET_ID, 'Q3 Master', final_data['master_data'])
+    write_new_master_to_sheet(api, DATASET_SHEET_ID, 'Q4 Master', final_data['master_data'])
 
   unsorted_pw_jumpers = list(filter((lambda student: int(student['data'][1:]) > 0),separate_students_by_data_group(final_data['current_students'], 'pw_change')))
   sorted_pw_jumpers = sorted(unsorted_pw_jumpers, key=lambda student: int(student['data'][1:]))
