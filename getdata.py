@@ -5,6 +5,7 @@ from os import getcwd as get_current_directory
 from pptx import Presentation
 from pptx.util import Inches
 from execute_email import create_and_send_email
+from CommunityMeeting import CommunityMeeting
 import logging
 logging.basicConfig(filename='debug.log',level=logging.DEBUG)
 
@@ -114,54 +115,13 @@ def separate_students_by_data_group(students_list, attribute):
     temp_obj['data'] = student[attribute]
     separated_students.append(temp_obj)
 
-  # separated_students = sorted(sortable_data, key=lambda student: student['data'], reverse=True)
+    # separated_students = sorted(sortable_data, key=lambda student: student['data'], reverse=True)
   for student in separated_students:
     if 'change' in attribute:
       student['data'] = '+' + str(student['data'])
     else:
       student['data'] = str(student['data'])
   return separated_students
-
-def add_student_to_slide(slide, student, textbox):
-  first_name = student['first_name']
-  last_name = student['last_name']
-  data = student['data']
-  textbox.text_frame.text = "{} {} {}".format(first_name, last_name, data)
-
-def make_ppt(file_path, data):
-  print('Making PowerPoint...')
-  presentation = Presentation()
-  blank_slide_layout = presentation.slide_layouts[6]
-  slide = presentation.slides.add_slide(blank_slide_layout)
-
-  row = 0
-  number_of_students_on_slide = 0
-  left_margin = 0.5
-  top_margin = 1
-  textbox_width = 1
-  textbox_height = 1
-
-  for student in data:
-    if row == 0:
-      title_box = slide.shapes.add_textbox(Inches(left_margin),Inches(top_margin),Inches(textbox_width),Inches(textbox_height))
-      title_box.text_frame.text = file_path.split('/')[-1].split('_')[-1][:-5]
-      slide = presentation.slides.add_slide(blank_slide_layout)
-    if row > 0:
-      if number_of_students_on_slide == 36:
-        slide = presentation.slides.add_slide(blank_slide_layout)
-        number_of_students_on_slide = 0
-        left_margin = 0.5
-        top_margin = 1
-      if number_of_students_on_slide == 12 or number_of_students_on_slide == 24:
-        left_margin += 3
-        top_margin = 1
-      new_textbox = slide.shapes.add_textbox(Inches(left_margin),Inches(top_margin),Inches(textbox_width),Inches(textbox_height))
-      add_student_to_slide(slide, student, new_textbox)
-      number_of_students_on_slide += 1
-      top_margin += 0.5
-    row += 1
-  presentation.save(file_path)
-  print('- Saved PowerPoint at ./{}'.format('/'.join(file_path.split('/')[-2:])))
 
 def main():
   api = connect_to_googlesheets()
@@ -202,13 +162,12 @@ def main():
   pwleaders_path = '{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date)
   gpajumpers_path = '{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date)
 
-  make_ppt(pwjumpers_path, sorted_pw_jumpers)
-  make_ppt(pwleaders_path, sorted_pw_leaders)
-  make_ppt(gpajumpers_path, sorted_gpa_jumpers)
+  comm_meeting = CommunityMeeting()
+  comm_meeting.make_ppt(pwjumpers_path, sorted_pw_jumpers)
+  comm_meeting.make_ppt(pwleaders_path, sorted_pw_leaders)
+  comm_meeting.make_ppt(gpajumpers_path, sorted_gpa_jumpers)
 
   create_and_send_email([pwjumpers_path, pwleaders_path, gpajumpers_path])
-
-
 
 if __name__ == '__main__':
   main()
