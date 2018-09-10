@@ -4,6 +4,7 @@ import datetime
 from os import getcwd as get_current_directory
 from execute_email import create_and_send_email
 from CommunityMeeting import CommunityMeeting
+from Advisory import Advisory
 import logging
 logging.basicConfig(filename='debug.log',level=logging.DEBUG)
 
@@ -106,6 +107,7 @@ def separate_students_by_data_group(students_list, attribute):
         temp_obj['id'] = stu_id
         temp_obj['first_name'] = student['first_name']
         temp_obj['last_name'] = student['last_name']
+        temp_obj['advisory'] = student['advisory']
         temp_obj['data'] = student[attribute]
         separated_students.append(temp_obj)
 
@@ -146,7 +148,7 @@ def main():
     # extract and sort list of students whose pw_avg is greater than or equal to 85
     unsorted_pw_leaders = list(filter((lambda student: int(student['data'][:-1]) >= 85),separate_students_by_data_group(final_data['current_students'], 'pw_avg')))
     sorted_pw_leaders = sorted(unsorted_pw_leaders, key=lambda student: int(student['data'][:-1]))
-    print(sorted_pw_jumpers)
+
 
     # extract and sort list of students whose gpa_change is greater than 0.0
     unsorted_gpa_jumpers = list(filter((lambda student: float(student['data'][1:]) > 0.0),separate_students_by_data_group(final_data['current_students'], 'gpa_change')))
@@ -158,16 +160,18 @@ def main():
 
     date = str(datetime.date.today().month).rjust(2, '0') + '_' + str(datetime.date.today().day) + '_' + str(datetime.date.today().year)[2:]
 
-    pwjumpers_path = '{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date)
-    pwleaders_path = '{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date)
-    gpajumpers_path = '{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date)
+    # pwjumpers_path = '{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date)
+    # pwleaders_path = '{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date)
+    # gpajumpers_path = '{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date)
 
-    comm_meeting = CommunityMeeting()
-    comm_meeting.make_ppt(pwjumpers_path, sorted_pw_jumpers)
-    comm_meeting.make_ppt(pwleaders_path, sorted_pw_leaders)
-    comm_meeting.make_ppt(gpajumpers_path, sorted_gpa_jumpers)
+    # comm_meeting = CommunityMeeting()
+    # comm_meeting.make_ppt(pwjumpers_path, sorted_pw_jumpers)
+    # comm_meeting.make_ppt(pwleaders_path, sorted_pw_leaders)
+    # comm_meeting.make_ppt(gpajumpers_path, sorted_gpa_jumpers)
 
-    create_and_send_email([pwjumpers_path, pwleaders_path, gpajumpers_path])
+    # create_and_send_email([pwjumpers_path, pwleaders_path, gpajumpers_path])
+
+    advisory = Advisory(final_data['current_students'])
 
 if __name__ == '__main__':
     main()

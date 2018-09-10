@@ -2,8 +2,50 @@ from pptx import Presentation
 from pptx.util import Inches
 
 class Advisory():
-    def __init__(self):
-        pass
+    def __init__(self, students):
+        self.advisories = self.make_advisories(students)
+        # print(self.advisories['NYU'])
+        print(self.get_gpa_leaders(self.advisories['NYU']))
+
+    def make_advisories(self, students):
+        advisories = {}
+        for stu_id in students:
+            student = students[stu_id]
+            advisory = student['advisory']
+            if not advisories.get(advisory, None):
+                advisories[advisory] = []
+            advisories[advisory].append(student)
+        return advisories
+
+    def get_pw_jumpers(self, students):
+        jumpers = list(filter((lambda student: int(student['data'][1:]) > 0), self.get_advisory_data_group(students, 'pw_change')))
+        return sorted(jumpers, key=lambda student: int(student['data'][1:]))
+
+    def get_gpa_jumpers(self, students):
+        jumpers = list(filter((lambda student: float(student['data'][1:]) > 0), self.get_advisory_data_group(students, 'gpa_change')))
+        return sorted(jumpers, key=lambda student: float(student['data'][1:]))
+
+    def get_gpa_leaders(self, students):
+        leaders = list(filter((lambda student: float(student['data']) >= 3.0), self.get_advisory_data_group(students, 'gpa')))
+        return sorted(leaders, key=lambda student: float(student['data']))
+
+    def get_advisory_data_group(self, students_list, attribute):
+        separated_students = []
+        for student in students_list:
+            temp_obj = {}
+            temp_obj['first_name'] = student['first_name']
+            temp_obj['last_name'] = student['last_name']
+            temp_obj['advisory'] = student['advisory']
+            temp_obj['data'] = student[attribute]
+            separated_students.append(temp_obj)
+
+        # separated_students = sorted(sortable_data, key=lambda student: student['data'], reverse=True)
+        for student in separated_students:
+            if 'change' in attribute:
+                student['data'] = '+' + str(student['data'])
+            else:
+                student['data'] = str(student['data'])
+        return separated_students
 
     def add_student_to_slide(self, slide, student, textbox):
         first_name = student['first_name']
