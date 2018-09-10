@@ -41,12 +41,15 @@ def add_current_data_to_master(master_data, current_students):
             last_name = index
         if column == 'first_name':
             first_name = index
+        if column == 'Advisory':
+            advisory = index
     r = 0
     for master_student in master_data:
         if r > 0:
             student_id = master_student[id_column]
             student_last_name = master_student[last_name]
             student_first_name = master_student[first_name]
+            student_advisory = master_student[advisory]
             current_student = current_students.get(student_id, {})
 
             current_pw_avg = current_student.get('pw_avg').replace('%', '')
@@ -72,6 +75,7 @@ def add_current_data_to_master(master_data, current_students):
             current_student['last_name'] = student_last_name
             current_student['pw_change'] = pw_change
             current_student['gpa_change'] = gpa_change
+            current_student['advisory'] = student_advisory
         r += 1
     today = str(datetime.date.today().day)
     month = str(datetime.date.today().month)
@@ -84,6 +88,7 @@ def add_current_data_to_master(master_data, current_students):
     final_data = {}
     final_data['master_data'] = master_data
     final_data['current_students'] = current_students
+
     return final_data
 
 def write_new_master_to_sheet(api, DATASET_SHEET_ID, master_tab_name, final_data):
@@ -118,14 +123,14 @@ def main():
     current_data = sheets.get_relevant_data(DATASET_SHEET_ID, 'CurrentData', '!A1:AE')
 
     current_students = make_current_students(current_data)
-    old_master_data = sheets.get_relevant_data(DATASET_SHEET_ID, 'Q4 Master', '!1:250')
+    old_master_data = sheets.get_relevant_data(DATASET_SHEET_ID, 'Q1 Master', '!1:300')
     today = str(datetime.date.today().month) + '/' + str(datetime.date.today().day)
     old_master_headers = ' '.join(old_master_data[0])
 
     final_data = add_current_data_to_master(old_master_data, current_students)
 
     if today not in old_master_headers:
-        write_new_master_to_sheet(sheets.connection, DATASET_SHEET_ID, 'Q4 Master', final_data['master_data'])
+        write_new_master_to_sheet(sheets.connection, DATASET_SHEET_ID, 'Q1 Master', final_data['master_data'])
 
     # extract and sort list of students whose pw_change is greater than 0
     unsorted_pw_jumpers = list(filter((lambda student: int(student['data'][1:]) > 0),separate_students_by_data_group(final_data['current_students'], 'pw_change')))
@@ -141,6 +146,7 @@ def main():
     # extract and sort list of students whose pw_avg is greater than or equal to 85
     unsorted_pw_leaders = list(filter((lambda student: int(student['data'][:-1]) >= 85),separate_students_by_data_group(final_data['current_students'], 'pw_avg')))
     sorted_pw_leaders = sorted(unsorted_pw_leaders, key=lambda student: int(student['data'][:-1]))
+    print(sorted_pw_jumpers)
 
     # extract and sort list of students whose gpa_change is greater than 0.0
     unsorted_gpa_jumpers = list(filter((lambda student: float(student['data'][1:]) > 0.0),separate_students_by_data_group(final_data['current_students'], 'gpa_change')))

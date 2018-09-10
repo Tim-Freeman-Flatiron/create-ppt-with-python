@@ -7,3 +7,4 @@ PowerPoints/
 *.log
 __pycache__/
 *credentials
+.DS_Store
