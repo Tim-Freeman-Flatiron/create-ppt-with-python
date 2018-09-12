@@ -38,9 +38,9 @@ def add_current_data_to_master(master_data, current_students):
             previous_pw_column = index
         if 'GPA' in column and 'Change' not in column:
             previous_gpa_column = index
-        if column == 'last_name':
+        if column == 'Last':
             last_name = index
-        if column == 'first_name':
+        if column == 'First':
             first_name = index
         if column == 'Advisory':
             advisory = index
@@ -131,8 +131,8 @@ def main():
 
     final_data = add_current_data_to_master(old_master_data, current_students)
 
-    if today not in old_master_headers:
-        write_new_master_to_sheet(sheets.connection, DATASET_SHEET_ID, 'Q1 Master', final_data['master_data'])
+    # if today not in old_master_headers:
+    #     write_new_master_to_sheet(sheets.connection, DATASET_SHEET_ID, 'Q1 Master', final_data['master_data'])
 
     # extract and sort list of students whose pw_change is greater than 0
     unsorted_pw_jumpers = list(filter((lambda student: int(student['data'][1:]) > 0),separate_students_by_data_group(final_data['current_students'], 'pw_change')))
@@ -160,9 +160,9 @@ def main():
 
     date = str(datetime.date.today().month).rjust(2, '0') + '_' + str(datetime.date.today().day) + '_' + str(datetime.date.today().year)[2:]
 
-    # pwjumpers_path = '{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date)
-    # pwleaders_path = '{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date)
-    # gpajumpers_path = '{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date)
+    pwjumpers_path = '{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date)
+    pwleaders_path = '{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date)
+    gpajumpers_path = '{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date)
 
     # comm_meeting = CommunityMeeting()
     # comm_meeting.make_ppt(pwjumpers_path, sorted_pw_jumpers)
@@ -172,6 +172,7 @@ def main():
     # create_and_send_email([pwjumpers_path, pwleaders_path, gpajumpers_path])
 
     advisory = Advisory(final_data['current_students'])
+    advisory.make_ppt()
 
 if __name__ == '__main__':
     main()
