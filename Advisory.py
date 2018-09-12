@@ -1,6 +1,7 @@
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from os import getcwd as get_current_directory
+import datetime
 
 class Advisory():
     def __init__(self, students):
@@ -77,32 +78,24 @@ class Advisory():
                 top_margin = 1
                 textbox_width = 1
                 textbox_height = 1
-                title_box = slide.shapes.add_textbox(Inches(left_margin),Inches(top_margin),Inches(textbox_width),Inches(textbox_height))
-                title_box.text_frame.text = name + " " + group_name
-                title_box.text_frame.font.size = Pt(18)
-                title_box.text_frame.font.bold = True
-                top_margin += 0.5
+                box = slide.shapes.add_textbox(Inches(left_margin),Inches(top_margin),Inches(textbox_width),Inches(textbox_height))
+                title_box = box.text_frame.paragraphs[0].add_run()
+                title_box.text = name + " " + group_name
+                title_box.font.name = "Calibri"
+                title_box.font.size = Pt(30)
+                title_box.font.bold = True
+                top_margin += 1
 
                 for student in data:
-                    # if row == 0:
-                    #     title_box = slide.shapes.add_textbox(Inches(left_margin),Inches(top_margin),Inches(textbox_width),Inches(textbox_height))
-                    #     title_box.text_frame.text = file_path.split('/')[-1].split('_')[-1][:-5]
-                    #     top_margin += 0.5
-                    #     # slide = presentation.slides.add_slide(blank_slide_layout)
-                    # if row > 0:
-                    # if number_of_students_on_slide == 36:
-                    #     slide = presentation.slides.add_slide(blank_slide_layout)
-                    #     number_of_students_on_slide = 0
-                    #     left_margin = 0.5
-                    #     top_margin = 1
                     if number_of_students_on_slide == 12 or number_of_students_on_slide == 24:
                         left_margin += 3
-                        top_margin = 1
+                        top_margin = 2
                     new_textbox = slide.shapes.add_textbox(Inches(left_margin),Inches(top_margin),Inches(textbox_width),Inches(textbox_height))
                     self.add_student_to_slide(slide, student, new_textbox)
                     number_of_students_on_slide += 1
                     top_margin += 0.5
                     row += 1
-        file_path = '{}/PowerPoints/test_advisory.pptx'.format(get_current_directory())
+        date = str(datetime.date.today().month).rjust(2, '0') + '_' + str(datetime.date.today().day) + '_' + str(datetime.date.today().year)[2:]
+        file_path = '{}/PowerPoints/advisory_{}.pptx'.format(get_current_directory(), date)
         presentation.save(file_path)
         print('- Saved PowerPoint at ./{}'.format('/'.join(file_path.split('/')[-2:])))

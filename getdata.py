@@ -6,6 +6,7 @@ from execute_email import create_and_send_email
 from CommunityMeeting import CommunityMeeting
 from Advisory import Advisory
 import logging
+import sys
 logging.basicConfig(filename='debug.log',level=logging.DEBUG)
 
 def make_current_students(current_data):
@@ -131,48 +132,52 @@ def main():
 
     final_data = add_current_data_to_master(old_master_data, current_students)
 
-    # if today not in old_master_headers:
-    #     write_new_master_to_sheet(sheets.connection, DATASET_SHEET_ID, 'Q1 Master', final_data['master_data'])
+    if sys.argv[1] == 'comm':
+        if today not in old_master_headers:
+            write_new_master_to_sheet(sheets.connection, DATASET_SHEET_ID, 'Q1 Master', final_data['master_data'])
 
-    # extract and sort list of students whose pw_change is greater than 0
-    unsorted_pw_jumpers = list(filter((lambda student: int(student['data'][1:]) > 0),separate_students_by_data_group(final_data['current_students'], 'pw_change')))
-    sorted_pw_jumpers = sorted(unsorted_pw_jumpers, key=lambda student: int(student['data'][1:]))
+        # extract and sort list of students whose pw_change is greater than 0
+        unsorted_pw_jumpers = list(filter((lambda student: int(student['data'][1:]) > 0),separate_students_by_data_group(final_data['current_students'], 'pw_change')))
+        sorted_pw_jumpers = sorted(unsorted_pw_jumpers, key=lambda student: int(student['data'][1:]))
 
-    if len(sorted_pw_jumpers) > 108:
-        start = len(sorted_pw_jumpers) - 108
-        sorted_pw_jumpers = sorted_pw_jumpers[start:]
+        if len(sorted_pw_jumpers) > 108:
+            start = len(sorted_pw_jumpers) - 108
+            sorted_pw_jumpers = sorted_pw_jumpers[start:]
 
-    for student in sorted_pw_jumpers:
-        student['data'] = student['data'] + '%'
+        for student in sorted_pw_jumpers:
+            student['data'] = student['data'] + '%'
 
-    # extract and sort list of students whose pw_avg is greater than or equal to 85
-    unsorted_pw_leaders = list(filter((lambda student: int(student['data'][:-1]) >= 85),separate_students_by_data_group(final_data['current_students'], 'pw_avg')))
-    sorted_pw_leaders = sorted(unsorted_pw_leaders, key=lambda student: int(student['data'][:-1]))
+        # extract and sort list of students whose pw_avg is greater than or equal to 85
+        unsorted_pw_leaders = list(filter((lambda student: int(student['data'][:-1]) >= 85),separate_students_by_data_group(final_data['current_students'], 'pw_avg')))
+        sorted_pw_leaders = sorted(unsorted_pw_leaders, key=lambda student: int(student['data'][:-1]))
 
 
-    # extract and sort list of students whose gpa_change is greater than 0.0
-    unsorted_gpa_jumpers = list(filter((lambda student: float(student['data'][1:]) > 0.0),separate_students_by_data_group(final_data['current_students'], 'gpa_change')))
-    sorted_gpa_jumpers = sorted(unsorted_gpa_jumpers, key=lambda student: float(student['data'][1:]))
+        # extract and sort list of students whose gpa_change is greater than 0.0
+        unsorted_gpa_jumpers = list(filter((lambda student: float(student['data'][1:]) > 0.0),separate_students_by_data_group(final_data['current_students'], 'gpa_change')))
+        sorted_gpa_jumpers = sorted(unsorted_gpa_jumpers, key=lambda student: float(student['data'][1:]))
 
-    if len(sorted_gpa_jumpers) > 108:
-        start = len(sorted_gpa_jumpers) - 108
-        sorted_gpa_jumpers = sorted_gpa_jumpers[start:]
+        if len(sorted_gpa_jumpers) > 108:
+            start = len(sorted_gpa_jumpers) - 108
+            sorted_gpa_jumpers = sorted_gpa_jumpers[start:]
 
-    date = str(datetime.date.today().month).rjust(2, '0') + '_' + str(datetime.date.today().day) + '_' + str(datetime.date.today().year)[2:]
+        date = str(datetime.date.today().month).rjust(2, '0') + '_' + str(datetime.date.today().day) + '_' + str(datetime.date.today().year)[2:]
 
-    pwjumpers_path = '{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date)
-    pwleaders_path = '{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date)
-    gpajumpers_path = '{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date)
+        pwjumpers_path = '{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date)
+        pwleaders_path = '{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date)
+        gpajumpers_path = '{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date)
 
-    # comm_meeting = CommunityMeeting()
-    # comm_meeting.make_ppt(pwjumpers_path, sorted_pw_jumpers)
-    # comm_meeting.make_ppt(pwleaders_path, sorted_pw_leaders)
-    # comm_meeting.make_ppt(gpajumpers_path, sorted_gpa_jumpers)
+        comm_meeting = CommunityMeeting()
+        comm_meeting.make_ppt(pwjumpers_path, sorted_pw_jumpers)
+        comm_meeting.make_ppt(pwleaders_path, sorted_pw_leaders)
+        comm_meeting.make_ppt(gpajumpers_path, sorted_gpa_jumpers)
 
-    # create_and_send_email([pwjumpers_path, pwleaders_path, gpajumpers_path])
-
-    advisory = Advisory(final_data['current_students'])
-    advisory.make_ppt()
+        create_and_send_email([pwjumpers_path, pwleaders_path, gpajumpers_path])
+    elif sys.argv[1] == 'adv':
+        advisory = Advisory(final_data['current_students'])
+        advisory.make_ppt()
+        create_and_send_email(['{}/PowerPoints/test_advisory.pptx'.format(get_current_directory())])
+    else:
+        print('need third arg')
 
 if __name__ == '__main__':
     main()
