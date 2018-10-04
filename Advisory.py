@@ -7,21 +7,25 @@ class Advisory():
     def __init__(self, students):
         self.advisories = self.make_advisories(students)
         self.advisory_names = self.advisories.keys()
-        self.NYU = self.advisories['NYU']
 
     def make_advisories(self, students):
         advisories = {}
         for stu_id in students:
             student = students[stu_id]
-            advisory = student['advisory']
-            if not advisories.get(advisory, None):
-                advisories[advisory] = []
-            advisories[advisory].append(student)
+            if 'advisory' in student.keys():
+                advisory = student['advisory']
+                if not advisories.get(advisory, None):
+                    advisories[advisory] = []
+                advisories[advisory].append(student)
         return advisories
 
     def get_pw_jumpers(self, students):
         jumpers = list(filter((lambda student: int(student['data'][1:]) > 0), self.get_advisory_data_group(students, 'pw_change')))
         return sorted(jumpers, key=lambda student: int(student['data'][1:]))
+
+    def get_pw_leaders(self, students):
+        leaders = list(filter((lambda student: int(student['data'][:-1]) >= 85), self.get_advisory_data_group(students, 'pw_avg')))
+        return sorted(leaders, key=lambda student: int(student['data'][:-1]))
 
     def get_gpa_jumpers(self, students):
         jumpers = list(filter((lambda student: float(student['data'][1:]) > 0), self.get_advisory_data_group(students, 'gpa_change')))
@@ -53,6 +57,8 @@ class Advisory():
         first_name = student['first_name']
         last_name = student['last_name']
         data = student['data']
+        if len(data) == 1:
+            data = data + ".00"
         textbox.text_frame.text = "{} {} {}".format(first_name, last_name, data)
 
     def make_ppt(self):
@@ -63,9 +69,10 @@ class Advisory():
         for name in self.advisory_names:
             students = self.advisories[name]
             groups = [
-                ["Prep Work Jumpers",self.get_pw_jumpers(students)],
-                ["GPA Jumpers", self.get_gpa_jumpers(students)],
-                ["GPA Leaders", self.get_gpa_leaders(students)]
+                # ["Prep Work Jumpers",self.get_pw_jumpers(students)],
+                # ["GPA Jumpers", self.get_gpa_jumpers(students)],
+                ["GPA Leaders", self.get_gpa_leaders(students)],
+                ["PW Leaders", self.get_pw_leaders(students)]
             ]
 
             for group in groups:
@@ -87,8 +94,8 @@ class Advisory():
                 top_margin += 1
 
                 for student in data:
-                    if number_of_students_on_slide == 12 or number_of_students_on_slide == 24:
-                        left_margin += 3
+                    if number_of_students_on_slide == 11 or number_of_students_on_slide == 22:
+                        left_margin += 3.5
                         top_margin = 2
                     new_textbox = slide.shapes.add_textbox(Inches(left_margin),Inches(top_margin),Inches(textbox_width),Inches(textbox_height))
                     self.add_student_to_slide(slide, student, new_textbox)
@@ -99,3 +106,4 @@ class Advisory():
         file_path = '{}/PowerPoints/advisory_{}.pptx'.format(get_current_directory(), date)
         presentation.save(file_path)
         print('- Saved PowerPoint at ./{}'.format('/'.join(file_path.split('/')[-2:])))
+        return file_path

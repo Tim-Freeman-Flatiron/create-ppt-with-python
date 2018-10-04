@@ -18,14 +18,19 @@ def make_current_students(current_data):
             current_pw_avg = index
         elif column == 'Weighted Live GPA':
             current_gpa = index
+        elif column == 'Grade':
+            grade = index
 
     student_data = {}
     r = 0
     for student in current_data:
         if r > 0:
-            key = student[student_id]
-            value = {'pw_avg': student[current_pw_avg], 'gpa': student[current_gpa]}
-            student_data[key] = value
+            try :
+                key = student[student_id]
+                value = {'pw_avg': student[current_pw_avg], 'gpa': student[current_gpa], 'grade': student[grade]}
+                student_data[key] = value
+            except:
+                pass
         r += 1
     return student_data
 
@@ -48,36 +53,39 @@ def add_current_data_to_master(master_data, current_students):
     r = 0
     for master_student in master_data:
         if r > 0:
-            student_id = master_student[id_column]
-            student_last_name = master_student[last_name]
-            student_first_name = master_student[first_name]
-            student_advisory = master_student[advisory]
-            current_student = current_students.get(student_id, {})
+            try:
+                student_id = master_student[id_column]
+                student_last_name = master_student[last_name]
+                student_first_name = master_student[first_name]
+                student_advisory = master_student[advisory]
+                current_student = current_students.get(student_id, {})
 
-            current_pw_avg = current_student.get('pw_avg').replace('%', '')
-            current_gpa = current_student.get('gpa')
+                current_pw_avg = current_student.get('pw_avg').replace('%', '')
+                current_gpa = current_student.get('gpa')
 
-            master_student.append(current_pw_avg)
-            master_student.append(current_gpa)
+                master_student.append(current_pw_avg)
+                master_student.append(current_gpa)
 
-            previous_pw = master_student[previous_pw_column]
-            previous_gpa = master_student[previous_gpa_column]
+                previous_pw = master_student[previous_pw_column]
+                previous_gpa = master_student[previous_gpa_column]
 
-            pw_change = ''
-            if previous_pw and current_pw_avg:
-                pw_change = int(current_pw_avg) - int(previous_pw)
+                pw_change = ''
+                if previous_pw and current_pw_avg:
+                    pw_change = int(current_pw_avg) - int(previous_pw)
 
-            gpa_change = ''
-            if previous_gpa and current_gpa:
-                gpa_change = round((float(current_gpa) - float(previous_gpa)), 2)
+                gpa_change = ''
+                if previous_gpa and current_gpa:
+                    gpa_change = round((float(current_gpa) - float(previous_gpa)), 2)
 
-            master_student.append(pw_change)
-            master_student.append(gpa_change)
-            current_student['first_name'] = student_first_name
-            current_student['last_name'] = student_last_name
-            current_student['pw_change'] = pw_change
-            current_student['gpa_change'] = gpa_change
-            current_student['advisory'] = student_advisory
+                master_student.append(pw_change)
+                master_student.append(gpa_change)
+                current_student['first_name'] = student_first_name
+                current_student['last_name'] = student_last_name
+                current_student['pw_change'] = pw_change
+                current_student['gpa_change'] = gpa_change
+                current_student['advisory'] = student_advisory
+            except:
+                pass
         r += 1
     today = str(datetime.date.today().day)
     month = str(datetime.date.today().month)
@@ -103,14 +111,18 @@ def separate_students_by_data_group(students_list, attribute):
     student_ids = list(students_list.keys())
     separated_students = []
     for stu_id in student_ids:
-        student = students_list[stu_id]
-        temp_obj = {}
-        temp_obj['id'] = stu_id
-        temp_obj['first_name'] = student['first_name']
-        temp_obj['last_name'] = student['last_name']
-        temp_obj['advisory'] = student['advisory']
-        temp_obj['data'] = student[attribute]
-        separated_students.append(temp_obj)
+        try:
+            student = students_list[stu_id]
+            if (student.get('grade', '') == 9 or student.get('grade', '') == '9') or sys.argv[1] == 'adv':
+                temp_obj = {}
+                temp_obj['id'] = stu_id
+                temp_obj['first_name'] = student['first_name']
+                temp_obj['last_name'] = student['last_name']
+                temp_obj['advisory'] = student['advisory']
+                temp_obj['data'] = student[attribute]
+                separated_students.append(temp_obj)
+        except:
+            pass
 
     # separated_students = sorted(sortable_data, key=lambda student: student['data'], reverse=True)
     for student in separated_students:
@@ -126,7 +138,7 @@ def main():
     current_data = sheets.get_relevant_data(DATASET_SHEET_ID, 'CurrentData', '!A1:AE')
 
     current_students = make_current_students(current_data)
-    old_master_data = sheets.get_relevant_data(DATASET_SHEET_ID, 'Q1 Master', '!1:300')
+    old_master_data = sheets.get_relevant_data(DATASET_SHEET_ID, 'Q1 Master', '!1:700')
     today = str(datetime.date.today().month) + '/' + str(datetime.date.today().day)
     old_master_headers = ' '.join(old_master_data[0])
 
@@ -160,8 +172,16 @@ def main():
             start = len(sorted_gpa_jumpers) - 108
             sorted_gpa_jumpers = sorted_gpa_jumpers[start:]
 
+        unsorted_gpa_leaders = list(filter((lambda student: float(student['data']) >= 3.0), separate_students_by_data_group(final_data['current_students'], 'gpa')))
+        sorted_gpa_leaders = sorted(unsorted_gpa_leaders, key=lambda student: float(student['data']))
+
+        if len(sorted_gpa_leaders) > 108:
+            start = len(sorted_gpa_leaders) - 108
+            sorted_gpa_leaders = sorted_gpa_leaders[start:]
+
         date = str(datetime.date.today().month).rjust(2, '0') + '_' + str(datetime.date.today().day) + '_' + str(datetime.date.today().year)[2:]
 
+        gpaleaders_path = '{}/PowerPoints/{}_GPALeaders.pptx'.format(get_current_directory(),date)
         pwjumpers_path = '{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date)
         pwleaders_path = '{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date)
         gpajumpers_path = '{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date)
@@ -170,12 +190,13 @@ def main():
         comm_meeting.make_ppt(pwjumpers_path, sorted_pw_jumpers)
         comm_meeting.make_ppt(pwleaders_path, sorted_pw_leaders)
         comm_meeting.make_ppt(gpajumpers_path, sorted_gpa_jumpers)
+        comm_meeting.make_ppt(gpaleaders_path, sorted_gpa_leaders)
 
-        create_and_send_email([pwjumpers_path, pwleaders_path, gpajumpers_path])
+        create_and_send_email([pwjumpers_path, pwleaders_path, gpajumpers_path, gpaleaders_path])
     elif sys.argv[1] == 'adv':
         advisory = Advisory(final_data['current_students'])
-        advisory.make_ppt()
-        create_and_send_email(['{}/PowerPoints/test_advisory.pptx'.format(get_current_directory())])
+        file_path = advisory.make_ppt()
+        create_and_send_email([file_path])
     else:
         print('need third arg')
 
