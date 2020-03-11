@@ -8,6 +8,7 @@ from Advisory import Advisory
 import logging
 import sys
 logging.basicConfig(filename='debug.log',level=logging.DEBUG)
+import pdb
 
 def make_current_students(current_data):
     headers = current_data[0]
@@ -25,7 +26,7 @@ def make_current_students(current_data):
     r = 0
     for student in current_data:
         if r > 0:
-            try :
+            try:
                 key = student[student_id]
                 value = {'pw_avg': student[current_pw_avg], 'gpa': student[current_gpa], 'grade': student[grade]}
                 student_data[key] = value
@@ -71,7 +72,7 @@ def add_current_data_to_master(master_data, current_students):
 
                 pw_change = ''
                 if previous_pw and current_pw_avg:
-                    pw_change = int(current_pw_avg) - int(previous_pw)
+                    pw_change = float(current_pw_avg) - float(previous_pw)
 
                 gpa_change = ''
                 if previous_gpa and current_gpa:
@@ -107,20 +108,29 @@ def write_new_master_to_sheet(api, DATASET_SHEET_ID, master_tab_name, final_data
     body = {'values': final_data}
     api.spreadsheets().values().update(spreadsheetId=DATASET_SHEET_ID, range=range_name, valueInputOption='RAW',body=body).execute()
 
-def separate_students_by_data_group(students_list, attribute):
+def separate_students_by_data_group(students_list, attribute, grade):
     student_ids = list(students_list.keys())
     separated_students = []
     for stu_id in student_ids:
         try:
             student = students_list[stu_id]
-            if (student.get('grade', '') == 9 or student.get('grade', '') == '9') or sys.argv[1] == 'adv':
+            should_process = True if student.get('grade', '') == str(grade) or student.get('grade', '') == int(grade) or sys.argv[1] == 'adv' else False
+
+            if should_process:
                 temp_obj = {}
                 temp_obj['id'] = stu_id
                 temp_obj['first_name'] = student['first_name']
                 temp_obj['last_name'] = student['last_name']
                 temp_obj['advisory'] = student['advisory']
                 temp_obj['data'] = student[attribute]
-                separated_students.append(temp_obj)
+
+                if type(temp_obj['data']) != str and '-' not in str(temp_obj['data']):
+                    if '%' in str(temp_obj['data']):
+                        temp_obj['data'] = float(temp_obj['data'][:-1])
+                        separated_students.append(temp_obj)
+                    else:
+                        temp_obj['data'] = float(temp_obj['data'])
+                        separated_students.append(temp_obj)
         except:
             pass
 
@@ -132,25 +142,32 @@ def separate_students_by_data_group(students_list, attribute):
             student['data'] = str(student['data'])
     return separated_students
 
+
+# example command: python getdata.py comm 9 save OR python getdata.py adv
 def main():
     # connection to Google Sheets and get relevant data
     sheets = GoogleSheets()
     current_data = sheets.get_relevant_data(DATASET_SHEET_ID, 'CurrentData', '!A1:AE')
 
     current_students = make_current_students(current_data)
-    old_master_data = sheets.get_relevant_data(DATASET_SHEET_ID, 'Q1 Master', '!1:700')
-    today = str(datetime.date.today().month) + '/' + str(datetime.date.today().day)
-    old_master_headers = ' '.join(old_master_data[0])
+    old_master_data = sheets.get_relevant_data(DATASET_SHEET_ID, 'Q3 Master', '!1:700')
+    # today = str(datetime.date.today().month) + '/' + str(datetime.date.today().day)
+    # old_master_headers = ' '.join(old_master_data[0])
 
     final_data = add_current_data_to_master(old_master_data, current_students)
 
     if sys.argv[1] == 'comm':
-        if today not in old_master_headers:
-            write_new_master_to_sheet(sheets.connection, DATASET_SHEET_ID, 'Q1 Master', final_data['master_data'])
+        grade = sys.argv[2]
 
+        # if today not in old_master_headers:
+        if sys.argv[3] == 'save':
+            write_new_master_to_sheet(sheets.connection, DATASET_SHEET_ID, 'Q3 Master', final_data['master_data'])
+
+        # for student in list(separate_students_by_data_group(final_data['current_students'], 'pw_change', grade)):
+        #     print(student['data'])
         # extract and sort list of students whose pw_change is greater than 0
-        unsorted_pw_jumpers = list(filter((lambda student: int(student['data'][1:]) > 0),separate_students_by_data_group(final_data['current_students'], 'pw_change')))
-        sorted_pw_jumpers = sorted(unsorted_pw_jumpers, key=lambda student: int(student['data'][1:]))
+        unsorted_pw_jumpers = list(filter((lambda student: float(student['data'][1:]) > 0),separate_students_by_data_group(final_data['current_students'], 'pw_change', grade)))
+        sorted_pw_jumpers = sorted(unsorted_pw_jumpers, key=lambda student: float(student['data'][1:]))
 
         if len(sorted_pw_jumpers) > 108:
             start = len(sorted_pw_jumpers) - 108
@@ -160,19 +177,18 @@ def main():
             student['data'] = student['data'] + '%'
 
         # extract and sort list of students whose pw_avg is greater than or equal to 85
-        unsorted_pw_leaders = list(filter((lambda student: int(student['data'][:-1]) >= 85),separate_students_by_data_group(final_data['current_students'], 'pw_avg')))
-        sorted_pw_leaders = sorted(unsorted_pw_leaders, key=lambda student: int(student['data'][:-1]))
-
+        unsorted_pw_leaders = list(filter((lambda student: float(student['data'][:-1]) >= 85),separate_students_by_data_group(final_data['current_students'], 'pw_avg', grade)))
+        sorted_pw_leaders = sorted(unsorted_pw_leaders, key=lambda student: float(student['data'][:-1]))
 
         # extract and sort list of students whose gpa_change is greater than 0.0
-        unsorted_gpa_jumpers = list(filter((lambda student: float(student['data'][1:]) > 0.0),separate_students_by_data_group(final_data['current_students'], 'gpa_change')))
+        unsorted_gpa_jumpers = list(filter((lambda student: float(student['data'][1:]) > 0.0),separate_students_by_data_group(final_data['current_students'], 'gpa_change', grade)))
         sorted_gpa_jumpers = sorted(unsorted_gpa_jumpers, key=lambda student: float(student['data'][1:]))
 
         if len(sorted_gpa_jumpers) > 108:
             start = len(sorted_gpa_jumpers) - 108
             sorted_gpa_jumpers = sorted_gpa_jumpers[start:]
 
-        unsorted_gpa_leaders = list(filter((lambda student: float(student['data']) >= 3.0), separate_students_by_data_group(final_data['current_students'], 'gpa')))
+        unsorted_gpa_leaders = list(filter((lambda student: float(student['data']) >= 3.0), separate_students_by_data_group(final_data['current_students'], 'gpa', grade)))
         sorted_gpa_leaders = sorted(unsorted_gpa_leaders, key=lambda student: float(student['data']))
 
         if len(sorted_gpa_leaders) > 108:
@@ -181,10 +197,10 @@ def main():
 
         date = str(datetime.date.today().month).rjust(2, '0') + '_' + str(datetime.date.today().day) + '_' + str(datetime.date.today().year)[2:]
 
-        gpaleaders_path = '{}/PowerPoints/{}_GPALeaders.pptx'.format(get_current_directory(),date)
-        pwjumpers_path = '{}/PowerPoints/{}_PWJumpers.pptx'.format(get_current_directory(),date)
-        pwleaders_path = '{}/PowerPoints/{}_PWLeaders.pptx'.format(get_current_directory(),date)
-        gpajumpers_path = '{}/PowerPoints/{}_GPAJumpers.pptx'.format(get_current_directory(),date)
+        gpaleaders_path = '{}/PowerPoints/{}_GPALeaders_{}.pptx'.format(get_current_directory(), date, grade)
+        pwjumpers_path = '{}/PowerPoints/{}_PWJumpers_{}.pptx'.format(get_current_directory(), date, grade)
+        pwleaders_path = '{}/PowerPoints/{}_PWLeaders_{}.pptx'.format(get_current_directory(), date, grade)
+        gpajumpers_path = '{}/PowerPoints/{}_GPAJumpers_{}.pptx'.format(get_current_directory(), date, grade)
 
         comm_meeting = CommunityMeeting()
         comm_meeting.make_ppt(pwjumpers_path, sorted_pw_jumpers)

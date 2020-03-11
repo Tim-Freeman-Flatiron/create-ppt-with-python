@@ -6,7 +6,7 @@ import datetime
 class Advisory():
     def __init__(self, students):
         self.advisories = self.make_advisories(students)
-        self.advisory_names = self.advisories.keys()
+        self.advisory_names = sorted(self.advisories.keys())
 
     def make_advisories(self, students):
         advisories = {}
