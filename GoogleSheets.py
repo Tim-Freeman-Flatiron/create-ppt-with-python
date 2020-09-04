@@ -1,5 +1,5 @@
 # for google api calls
-from apiclient import discovery
+from googleapiclient import discovery
 from httplib2 import Http
 from credentials import get_credentials # relative import of function to verify credentials
 
@@ -10,9 +10,8 @@ class GoogleSheets():
 
     def connect_to_googlesheets(self):
         print('Connecting to GoogleSheets...')
-        http = self.credentials.authorize(Http())
         api_url = ('https://sheets.googleapis.com/$discovery/rest?''version=v4')
-        googlesheets = discovery.build('sheets', 'v4', http=http, discoveryServiceUrl=api_url)
+        googlesheets = discovery.build('sheets', 'v4', credentials=self.credentials)
         print('- Successfully established connection to GoogleSheets.')
         return googlesheets
 

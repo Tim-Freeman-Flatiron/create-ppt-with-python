@@ -1,27 +1,29 @@
-import os
-
-from oauth2client import client, tools
-from oauth2client.file import Storage
-
-from argparse import ArgumentParser
-
-# If modifying SECRET_JSON, APP_NAME, or SCOPES, delete previously saved credentials
+from __future__ import print_function
+import pickle
+import os.path
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
 from secrets import SECRET_JSON, APP_NAME, SCOPES, CREDENTIAL_PATH, CREDENTIAL_DIRECTORY
 
-# this code has been modified from https://developers.google.com/sheets/api/quickstart/python
 def get_credentials():
-    if not os.path.exists(CREDENTIAL_DIRECTORY):
-        os.makedirs(CREDENTIAL_DIRECTORY)
+    creds = None
+    # The file token.pickle stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.pickle'):
+        with open('token.pickle', 'rb') as token:
+            creds = pickle.load(token)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', [SCOPES])
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.pickle', 'wb') as token:
+            pickle.dump(creds, token)
 
-    credential_path = os.path.join(CREDENTIAL_DIRECTORY, CREDENTIAL_PATH)
-    credentials_store = Storage(credential_path)
-    credentials = credentials_store.get()
-
-    if not credentials or credentials.invalid:
-        credentials_api_adapter = client.flow_from_clientsecrets(SECRET_JSON, SCOPES)
-        credentials_api_adapter.user_agent = APP_NAME
-        flags = ArgumentParser(parents=[tools.argparser]).parse_args()
-        credentials = tools.run_flow(credentials_api_adapter, credentials_store, flags)
-        print('Storing credentials to ' + credential_path)
-
-    return credentials
+    return creds

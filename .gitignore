@@ -8,3 +8,5 @@ PowerPoints/
 __pycache__/
 *credentials
 .DS_Store
+token.pickle
+credentials.json
